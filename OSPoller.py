@@ -4,6 +4,9 @@ import time
 import socket
 
 #poll OpenSong to find which slide type is shown
+#when calling the poll() function multiple times, only the type is returned when it is different then the previous call
+#otherwise OSPoller.NOCHANGE will be returned.
+
 class OSPoller:
     NOTRUNNING=-2
     TIMEOUT=-1
@@ -32,17 +35,18 @@ class OSPoller:
 
     def poll(self):       
         try:  
+            #check if presentation is running
             q = self.get_xml("/presentation/status")
             self.running = q.find("presentation").get("running")=="1"
             if not self.running:
                 return self.NOTRUNNING
             
+            #only if the presentation has started, we can retreive the 'set'
             slidelist = self.get_xml("/presentation/slide/list")
-            q = self.get_xml("/presentation/status")
 
-            slide = q.find("presentation/slide").get("itemnumber")
+            slide = q.find("presentation/slide").get("itemnumber")  #actual slide number of the presentation
             mode = q.find("presentation/screen").get("mode")=="N"   #normal mode means slide is visible
-            info = slidelist.find("slide[@identifier='{0}']".format(slide))
+            info = slidelist.find("slide[@identifier='{0}']".format(slide)) #lookup slide in 'set' with slide number
             n = info.get("type")
 
             #TODO: when slide is hidden:
@@ -79,9 +83,8 @@ class OSPoller:
         self.conn.close()
         
 if __name__ == "__main__":
-    g = OSPoller('192.168.0.191:8082')
+    g = OSPoller('127.0.0.1:8082')
     for i in range(10):
-        
         start = time.time()
         print(g.poll())
         end = time.time()
